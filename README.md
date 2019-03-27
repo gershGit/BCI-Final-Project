@@ -1,1 +1,1 @@
-# BCI Controlled Time Dilation in a First Person Shooter
+# Self Regulation of Alpha Waves as Difficulty Control For Video Games
