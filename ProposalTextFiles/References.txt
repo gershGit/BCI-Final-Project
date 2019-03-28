@@ -1,0 +1,8 @@
+[1] BCI for Games: A ‘State of the Art’ Survey
+    @ https://link.springer.com/chapter/10.1007/978-3-540-89222-9_29
+[2] EEG-based continuous control of a game using a 3 channel motor imagery BCI: BCI game
+    @ https://ieeexplore.ieee.org/document/5952128
+[3] Experiencing BCI Control in a Popular Computer Game
+    @ https://ieeexplore.ieee.org/document/6484110
+[4] Recognizing Frustration of Drivers From Face Video Recordings and Brain Activation Measurements With Functional Near-Infrared Spectroscopy
+    @ https://www.frontiersin.org/articles/10.3389/fnhum.2018.00327/full
