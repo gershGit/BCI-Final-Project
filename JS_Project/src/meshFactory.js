@@ -12,7 +12,7 @@ class GameObject {
         this.rotation = vec3(0,0,0);
         this.scale = vec3(1,1,1);
         this.velocity = vec3(0,0,0);
-        this.color = vec3(1,1,1);
+        this.color = vec3(0,0,0);
     }
 }
 

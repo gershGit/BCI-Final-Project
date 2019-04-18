@@ -28,15 +28,15 @@ precision mediump float;
 varying vec2 fragCoordinate;
 varying vec3 fragPosition;
 
-uniform sampler2D textureSampler;
 uniform vec3 lightPos;
+uniform vec3 colorIn;
 
 void main()
 {
     float d = length(fragPosition-lightPos) * 5.0;
-    vec3 color = texture2D(textureSampler, fragCoordinate).rgb * clamp((1.0 / (d*d)), 0.1, 2.0);
+    vec3 color = colorIn * clamp((25.0 / (d*d)), 0.1, 1.0);
     color = color + vec3(0.2);
-    gl_FragColor = vec4(color, texture2D(textureSampler, fragCoordinate).a);
+    gl_FragColor = vec4(color, 1.0);
 }
 </script>
 
@@ -61,7 +61,7 @@ void main()
         <button type="button" onclick="onConnect()">Connect</button>
     </body>
 </div>
-<img id = "wallTex" src = "textures/wall.jpg" hidden />
+<img id = "tempTex" src = "textures/temp.jpg" hidden />
 
 </body>
 <html>

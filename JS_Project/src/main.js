@@ -11,7 +11,7 @@ var locked = false;
 var model_id;
 var view;
 var perspective_id;
-var texture_id;
+var color_id;
 var lightPos_id;
 //Attribute locations
 var vPosition;
@@ -22,7 +22,7 @@ var vProgram;
 var sensitivity = 0.3;
 var mX = 0.0;
 var mY = 0.0;
-var camPos = vec3(0.0,0.2,0);
+var camPos = vec3(0.0,0.2,0.0);
 var camDir = vec3(0.0,0.0,-1.0);
 var perspMat = perspective(70, 1, 0.1, 48.0);
 
@@ -55,6 +55,7 @@ window.onload = function init() {
                 newProjectile.scale = vec3(0.2, 0.2, 0.2);
                 newProjectile.position = add(vec3(0,0.2,0), scale(2,camDir));
                 newProjectile.velocity = scale(15.0, camDir);
+                newProjectile.color = vec3(0,0,1);
                 objectList.push(newProjectile);
                 timeSinceLastLaunch = 0.0;
             }
@@ -68,7 +69,9 @@ window.onload = function init() {
 
     gl.viewport(0, 0, canvas.width, canvas.height);	//Set the viewport equal to the canvas
     gl.clearColor(0.7, 1.0, 1.0, 1.0);	//Set the clear color to white
+    gl.clearDepth(0.0);
     gl.enable(gl.DEPTH_TEST); //Turns on depth testing
+    gl.depthFunc(gl.GREATER);
 
     vProgram = initShaders(gl, "vertex-shader", "fragment-shader");	//Compile the shader program
     gl.useProgram(vProgram);	//Activate the shader program
@@ -78,7 +81,7 @@ window.onload = function init() {
     view = gl.getUniformLocation(vProgram, "view");
     perspective_id = gl.getUniformLocation(vProgram, "perspective");
     lightPos_id = gl.getUniformLocation( vProgram, "lightPos");
-    tPosition = gl.getUniformLocation(vProgram, 'textureSampler');
+    color_id = gl.getUniformLocation(vProgram, 'colorIn');
     vPosition = gl.getAttribLocation(vProgram, "vPosition");
     vTexCoord = gl.getAttribLocation( vProgram, "vTexCoord" ); 
 
@@ -88,6 +91,7 @@ window.onload = function init() {
     objectList.push(buildSquare(0));
     objectList[0].position = subtract(objectList[0].position, vec3(0.0,0.25,0.0));
     objectList[0].scale = vec3(3,3,3);
+    objectList[0].color = vec3(1,0,0);
 
     lastTime = Date.now();
     mainLoop();
@@ -150,7 +154,8 @@ function calculateCollisions(){
 function render(){
     //Clear the canvas
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-    gl.uniformMatrix4fv(view, gl.TRUE, flatten(lookAt(camPos, add(camPos, camDir), vec3(0,1,0))));
+    var viewMat = lookAt(camPos, add(camPos, camDir), vec3(0,1,0));
+    gl.uniformMatrix4fv(view, gl.TRUE, flatten(viewMat));
     gl.uniformMatrix4fv(perspective_id, gl.TRUE, flatten(perspMat));
     //Render each object in the master list
     for (i=0; i<objectList.length; i++) {
@@ -159,8 +164,8 @@ function render(){
         gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 24, 0);
         gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 24, 16 );
 
-        //TODO send in color data
-        gl.uniform1i(tPosition, objectList[i].texture);
+        gl.uniform3fv(color_id, flatten(objectList[i].color));
+        gl.uniform3fv(lightPos_id, flatten(vec3(0,1,0))); //TODO add more interesting light positioning
         gl.uniformMatrix4fv(model_id, gl.TRUE, flatten( getTransform(objectList[i].position, objectList[i].rotation, objectList[i].scale) ));
         gl.drawElements(gl.TRIANGLES, objectList[i].indexCount, gl.UNSIGNED_SHORT, 0);
     }
