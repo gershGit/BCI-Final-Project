@@ -43,7 +43,11 @@ void main()
 <script type="text/javascript" src="Common/webgl-utils.js"></script>
 <script type="text/javascript" src="Common/initShaders.js"></script>
 <script type="text/javascript" src="Common/MV.js"></script>
+<script type="text/javascript" src="Common/openbci.js"></script>
+<script type="text/javascript" src="Common/bci.min.js"></script>
+<script type="text/javascript" src="Common/three.min.js"></script>
 
+<script type="text/javascript" src="src/bciRetrieval.js"></script>
 <script type="text/javascript" src="src/meshFactory.js"></script>
 <script type="text/javascript" src="src/main.js"></script>
 </head>
@@ -52,6 +56,11 @@ void main()
 <canvas id="gl-canvas" width="512" height="512">
     ERROR NO CANVAS
 </canvas>
+<div>
+    <body>
+        <button type="button" onclick="onConnect()">Connect</button>
+    </body>
+</div>
 <img id = "wallTex" src = "textures/wall.jpg" hidden />
 
 </body>

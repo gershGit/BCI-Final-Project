@@ -100,7 +100,7 @@ function mainLoop(){
     timeSinceLastLaunch += deltaTime;
 
     //TODO gather BCI data                                  <Make separate javascript file for this>
-    //TODO apply BCI to difficulty
+    timeSpeed = getDifficulty();
     updatePhysics();
     calculateCollisions();
     //TODO                                                  <Points in HTML / CSS? >
