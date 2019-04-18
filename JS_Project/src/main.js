@@ -20,6 +20,8 @@ var vTexCoord;
 var vProgram;
 //View and perspective matrices
 var sensitivity = 0.3;
+var mX = 0.0;
+var mY = 0.0;
 var camPos = vec3(0.0,0.2,0);
 var camDir = vec3(0.0,0.0,-1.0);
 var perspMat = perspective(70, 1, 0.1, 48.0);
@@ -189,9 +191,12 @@ function lockChangeAlert() {
 //Updates the camera rotation based on the mouse movement
 function updatePosition(e) {
     //TODO mouse movement gets inverted Y after turning around
-    var xRot = rotate(-e.movementX, vec3(0,1,0));
-    var yRot = rotate(-e.movementY, vec3(1,0,0));
-    camDir = applyMatrix(camDir, mult(xRot, yRot));
+    mX -= e.movementX;
+    mY -= e.movementY;
+    var xRot = rotate(mX, vec3(0,1,0));
+    var yRot = rotate(mY, vec3(1,0,0));
+
+    camDir = applyMatrix(vec3(0,0,-1), mult(xRot, yRot));
 }
 
 //Matrix vector multiplication
