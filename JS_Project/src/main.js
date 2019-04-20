@@ -1,4 +1,5 @@
 /*
+    Noah Gershmel, Jack Hawblitzel, Elysse Kimmel
     WebGL Program using an FPS camera with speed of time controlled by alpha waves from OpenBCI
 */
 
@@ -6,6 +7,8 @@
 var canvas;
 var gl;
 var locked = false;
+var scoreboard;
+var shootAudio, impactAudio;
 
 //Uniform IDs
 var model_id;
@@ -19,20 +22,29 @@ var vTexCoord;
 //Shader Program
 var vProgram;
 //View and perspective matrices
-var sensitivity = 0.3;
+var sensitivity = 0.2;
 var mX = 0.0;
 var mY = 0.0;
 var camPos = vec3(0.0,0.2,0.0);
 var camDir = vec3(0.0,0.0,-1.0);
 var perspMat = perspective(70, 1, 0.1, 48.0);
 
+//Game Data
+var points = 0;
+var gameOver = false;
+
 //Time Control
 var lastTime;
 var deltaTime;
 var scaledTime;
-var paused = false;
+var paused = true;
 var timeSpeed = 1.0; 
 var timeSinceLastLaunch = 0.0; //Tracking variable for fire rate
+
+//Enemy Basic Data
+var enemySpeed = 2.0;
+var enemySpawnRate = 0.8;
+var timeSinceLastSpawn = 10.0;
 
 //Global data
 var objectList = [];
@@ -40,6 +52,10 @@ var objectList = [];
 //Setup on load
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas"); //Get canvas from html
+    scoreboard = document.getElementById("score");
+    shootAudio = document.getElementById("shoot");
+    shootAudio.volume = 0.3;
+    impactAudio = document.getElementById("impact");
 
     //Pointer locking
     canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
@@ -54,9 +70,10 @@ window.onload = function init() {
                 var newProjectile = buildCube(1);
                 newProjectile.scale = vec3(0.2, 0.2, 0.2);
                 newProjectile.position = add(vec3(0,0.2,0), scale(2,camDir));
-                newProjectile.velocity = scale(15.0, camDir);
+                newProjectile.velocity = scale(25.0, camDir);
                 newProjectile.color = vec3(0,0,1);
                 objectList.push(newProjectile);
+                shootAudio.play();
                 timeSinceLastLaunch = 0.0;
             }
 
@@ -69,9 +86,9 @@ window.onload = function init() {
 
     gl.viewport(0, 0, canvas.width, canvas.height);	//Set the viewport equal to the canvas
     gl.clearColor(0.7, 1.0, 1.0, 1.0);	//Set the clear color to white
-    gl.clearDepth(0.0);
+    gl.clearDepth(1.0);
     gl.enable(gl.DEPTH_TEST); //Turns on depth testing
-    gl.depthFunc(gl.GREATER);
+    gl.depthFunc(gl.LESS);
 
     vProgram = initShaders(gl, "vertex-shader", "fragment-shader");	//Compile the shader program
     gl.useProgram(vProgram);	//Activate the shader program
@@ -89,8 +106,8 @@ window.onload = function init() {
     fac_vTexCoord = vTexCoord;
 
     objectList.push(buildSquare(0));
-    objectList[0].position = subtract(objectList[0].position, vec3(0.0,0.25,0.0));
-    objectList[0].scale = vec3(3,3,3);
+    objectList[0].position = subtract(objectList[0].position, vec3(0.0,2.0,0.0));
+    objectList[0].scale = vec3(30,30,30);
     objectList[0].color = vec3(1,0,0);
 
     lastTime = Date.now();
@@ -102,59 +119,132 @@ function mainLoop(){
     //Handle time calculations
     deltaTime = (Date.now() - lastTime) / 1000.0;
     lastTime = Date.now();
+    if (paused) {
+        deltaTime = 0.0;
+    }
     scaledTime = deltaTime * timeSpeed;
     timeSinceLastLaunch += deltaTime;
+    timeSinceLastSpawn += deltaTime;
 
     //TODO gather BCI data                                  <Make separate javascript file for this>
     timeSpeed = getDifficulty();
+    updateEnemies();
     updatePhysics();
     calculateCollisions();
-    //TODO                                                  <Points in HTML / CSS? >
+    pruneObjectList();
     render();
-    //TODO render UI if not in html
-    requestAnimationFrame(mainLoop);
+    //TODO Cleaner scoreboard? Add to game screen?
+    if (!gameOver) {
+        requestAnimationFrame(mainLoop);
+    }
+}
+
+//Updates spawned enemy positions and spawns new enemies if necessary
+function updateEnemies(){
+    for (i=0; i<objectList.length; i++) {
+        //2 for enemies
+        if (objectList[i].type_id == 2){
+            var deltaPos = scale(deltaTime * enemySpeed, normalize( subtract(vec3(0,0,0), objectList[i].position) ) );
+            objectList[i].position = add(objectList[i].position, deltaPos);
+        }
+    }
+    if (timeSinceLastSpawn > (1.0 / enemySpawnRate)) {
+        spawnEnemy();
+        timeSinceLastSpawn = 0.0;
+    }
 }
 
 //Updates the position of all objects using physics
 function updatePhysics(){
     for (i=0; i<objectList.length; i++) {
         //1 for projectiles
-        if (objectList[i].type_id == 1) {
+        if (objectList[i].type_id == 1 || objectList[i].type_id == 3) {
             //Calculate the change in position
             var deltaPos = scale(deltaTime, add( objectList[i].velocity , scale(deltaTime*0.5, vec3(0,-9.8,0))) );
             //console.log(deltaPos[0], deltaPos[1], deltaPos[2]);
             objectList[i].position = add(objectList[i].position, deltaPos);
             objectList[i].velocity = add(objectList[i].velocity, scale(deltaTime, vec3(0,-9.8,0)));
         }
-        //2 for enemies
-        else if (objectList[i].type_id == 2){
-
-        }
     }
 }
 
-//TODO calculate collisions / points / delete objects
+//Calculate collisions / points / delete objects
 function calculateCollisions(){
     for (i=0; i<objectList.length; i++) {
         //1 for projectiles
         if (objectList[i].type_id == 1) {
             //Calculate the change in position
             if (objectList[i].position[1] < -5) {
-                objectList.splice(i,1); //Remove projectiles that have fallen out of screen
+                objectList[i].alive = false;
+            }
+            for (j=0; j<objectList.length; j++) {
+                if (objectList[j].type_id == 2) {
+                    if ( length( subtract( objectList[i].position, objectList[j].position) ) < 1.5 ){
+                        points++;
+                        scoreboard.innerHTML = points;
+                        objectList[i].alive = false;
+                        objectList[j].alive = false;
+                        break;
+                    }
+                }
             }
         }
         //2 for enemies
         else if (objectList[i].type_id == 2){
-
+            if (length( subtract( objectList[i].position, vec3(0,0,0)) ) < 2.0) {
+                timeSpeed = 0.0;
+                scoreboard.innerHTML = "Game Over! Your score was: " + points;
+                gameOver = true;
+                document.exitPointerLock();
+            }
+        }
+        //3 for shrapnel
+        else if (objectList[i].type_id == 3) {
+            if (objectList[i].position[1] < -1) {
+                objectList[i].alive = false;
+            }
         }
     }
+}
+
+//Removes dead objects from the list
+function pruneObjectList(){
+    var nList = [];
+    for (i = 0; i <objectList.length; i++) {
+        if (objectList[i].alive == true) {
+            nList.push(objectList[i]);
+        } else if (objectList[i].type_id == 2) {
+            impactAudio.play();
+
+            //Spawn explosion of particles
+            for (j = 0; j<6; j++) {
+                var particle = buildCube(3);
+                particle.scale = vec3(0.5, 0.5, 0.5);
+                particle.color = vec3(0,0,0);
+                var pPos = vec3 (getRandNegToOne(), getRandNegToOne(), getRandNegToOne());
+                particle.position = add( objectList[i].position, pPos );
+                particle.velocity = scale(4.0, normalize(pPos) );
+                nList.push(particle);
+            }
+        }
+    }
+    objectList = nList;
+}
+
+//Spawns an enemy on a hemisphere around the player
+function spawnEnemy(){
+    var newEnemy = buildCube(2);
+    var ePos = vec3(getRandNegToOne(), Math.random(), getRandNegToOne());
+    newEnemy.position = scale(30.0, normalize(ePos) );
+    newEnemy.color = vec3(0,1,0);
+    objectList.push(newEnemy);
 }
 
 //Renders all objects in scene
 function render(){
     //Clear the canvas
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-    var viewMat = lookAt(camPos, add(camPos, camDir), vec3(0,1,0));
+    var viewMat = mult(mult(rotate(-mY, vec3(1,0,0)), rotate(-mX, vec3(0,1,0))), scalem(0.5, 0.5, -0.5) );
     gl.uniformMatrix4fv(view, gl.TRUE, flatten(viewMat));
     gl.uniformMatrix4fv(perspective_id, gl.TRUE, flatten(perspMat));
     //Render each object in the master list
@@ -174,10 +264,10 @@ function render(){
 //Returns a transformation matrix from a position, rotation, and scale
 function getTransform(t, r, s) {
     var mat = scalem(s[0], s[1], s[2]);
-    mat = mult (rotate(r[0], vec3(1,0,0)) , mat);
-    mat = mult (rotate(r[1], vec3(0,1,0)) , mat);
-    mat = mult (rotate(r[2], vec3(0,0,1)) , mat);
-    mat = mult (translate(t[0], t[1], t[2]) , mat);
+    mat = mult (rotate(r[0], vec3(1,0,0)),mat );
+    mat = mult (rotate(r[1], vec3(0,1,0)),mat );
+    mat = mult (rotate(r[2], vec3(0,0,1)),mat );
+    mat = mult (translate(t[0], t[1], t[2]),mat );
     return mat;
 }
 
@@ -186,22 +276,23 @@ function lockChangeAlert() {
     if (document.pointerLockElement === canvas ||
         document.mozPointerLockElement === canvas) {
       locked = true;
+      paused = false;
       document.addEventListener("mousemove", updatePosition, false);
     } else {
       locked = false;
+      paused = true;
       document.removeEventListener("mousemove", updatePosition, false);
     }
-  }
+}
 
 //Updates the camera rotation based on the mouse movement
 function updatePosition(e) {
-    //TODO mouse movement gets inverted Y after turning around
-    mX -= e.movementX;
-    mY -= e.movementY;
-    var xRot = rotate(mX, vec3(0,1,0));
-    var yRot = rotate(mY, vec3(1,0,0));
+    mX -= e.movementX * sensitivity;
+    mY -= e.movementY * sensitivity;
+    var xRot = rotate(-mX, vec3(0,1,0));
+    var yRot = rotate(-mY, vec3(1,0,0));
 
-    camDir = applyMatrix(vec3(0,0,-1), mult(xRot, yRot));
+    camDir = applyMatrix(vec3(0,0,1), mult(xRot, yRot));
 }
 
 //Matrix vector multiplication
@@ -211,4 +302,9 @@ function applyMatrix(v, m) {
     r[1] = (m[1][0] * v[0]) + (m[1][1] * v[1]) + (m[1][2] * v[2]);
     r[2] = (m[2][0] * v[0]) + (m[2][1] * v[1]) + (m[2][2] * v[2]);
     return r;
+}
+
+//Returns a random number from -1 to 1
+function getRandNegToOne(){
+    return (Math.random() * 2) - 1;
 }
