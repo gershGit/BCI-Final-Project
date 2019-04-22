@@ -5,9 +5,11 @@
 
 //Global variables to hold webGL objects
 var canvas;
+var scRatio = 1;
 var gl;
 var locked = false;
 var scoreboard;
+var relaxValue;
 var shootAudio, impactAudio;
 
 //Uniform IDs
@@ -43,7 +45,7 @@ var timeSinceLastLaunch = 0.0; //Tracking variable for fire rate
 
 //Enemy Basic Data
 var enemySpeed = 2.0;
-var enemySpawnRate = 0.8;
+var enemySpawnRate = 0.7;
 var timeSinceLastSpawn = 10.0;
 
 //Global data
@@ -52,10 +54,15 @@ var objectList = [];
 //Setup on load
 window.onload = function init() {
     canvas = document.getElementById("gl-canvas"); //Get canvas from html
+    canvas.width = getWidth()-128;
+    canvas.height = getHeight()-128;
+    scRatio = canvas.width / canvas.height;
+
     scoreboard = document.getElementById("score");
     shootAudio = document.getElementById("shoot");
     shootAudio.volume = 0.3;
     impactAudio = document.getElementById("impact");
+    relaxValue = document.getElementById("relaxation");
 
     //Pointer locking
     canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
@@ -108,7 +115,7 @@ window.onload = function init() {
     objectList.push(buildSquare(0));
     objectList[0].position = subtract(objectList[0].position, vec3(0.0,2.0,0.0));
     objectList[0].scale = vec3(30,30,30);
-    objectList[0].color = vec3(1,0,0);
+    objectList[0].color = vec3(0,1,0);
 
     lastTime = Date.now();
     mainLoop();
@@ -126,14 +133,17 @@ function mainLoop(){
     timeSinceLastLaunch += deltaTime;
     timeSinceLastSpawn += deltaTime;
 
-    //TODO gather BCI data                                  <Make separate javascript file for this>
-    timeSpeed = getDifficulty();
+    timeSpeed = 1.0 - getDifficulty();
+    if (isNaN(timeSpeed)) {
+        timeSpeed = 1.0;
+    }
+    relaxValue.innerHTML = timeSpeed;
     updateEnemies();
     updatePhysics();
     calculateCollisions();
     pruneObjectList();
     render();
-    //TODO Cleaner scoreboard? Add to game screen?
+    
     if (!gameOver) {
         requestAnimationFrame(mainLoop);
     }
@@ -144,7 +154,7 @@ function updateEnemies(){
     for (i=0; i<objectList.length; i++) {
         //2 for enemies
         if (objectList[i].type_id == 2){
-            var deltaPos = scale(deltaTime * enemySpeed, normalize( subtract(vec3(0,0,0), objectList[i].position) ) );
+            var deltaPos = scale(scaledTime * enemySpeed, normalize( subtract(vec3(0,0,0), objectList[i].position) ) );
             objectList[i].position = add(objectList[i].position, deltaPos);
         }
     }
@@ -236,7 +246,7 @@ function spawnEnemy(){
     var newEnemy = buildCube(2);
     var ePos = vec3(getRandNegToOne(), Math.random(), getRandNegToOne());
     newEnemy.position = scale(30.0, normalize(ePos) );
-    newEnemy.color = vec3(0,1,0);
+    newEnemy.color = vec3(1,0,0);
     objectList.push(newEnemy);
 }
 
@@ -244,7 +254,7 @@ function spawnEnemy(){
 function render(){
     //Clear the canvas
     gl.clear( gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT );
-    var viewMat = mult(mult(rotate(-mY, vec3(1,0,0)), rotate(-mX, vec3(0,1,0))), scalem(0.5, 0.5, -0.5) );
+    var viewMat = mult(mult(rotate(-mY, vec3(1,0,0)), rotate(-mX, vec3(0,1,0))), scalem(0.5, 0.5 * scRatio, -0.5) );
     gl.uniformMatrix4fv(view, gl.TRUE, flatten(viewMat));
     gl.uniformMatrix4fv(perspective_id, gl.TRUE, flatten(perspMat));
     //Render each object in the master list
@@ -307,4 +317,25 @@ function applyMatrix(v, m) {
 //Returns a random number from -1 to 1
 function getRandNegToOne(){
     return (Math.random() * 2) - 1;
+}
+
+//From JQuery source code
+function getWidth() {
+    return Math.max(
+        document.body.scrollWidth,
+        document.documentElement.scrollWidth,
+        document.body.offsetWidth,
+        document.documentElement.offsetWidth,
+        document.documentElement.clientWidth
+    );
+}
+  
+function getHeight() {
+    return Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight,
+        document.body.offsetHeight,
+        document.documentElement.offsetHeight,
+        document.documentElement.clientHeight
+    );
 }

@@ -34,7 +34,7 @@ uniform vec3 colorIn;
 void main()
 {
     float d = length(fragPosition-lightPos) * 5.0;
-    vec3 color = colorIn * clamp((25.0 / (d*d)), 0.1, 1.0);
+    vec3 color = colorIn * clamp(30.0 / d, 0.1, 1.0);
     color = color + vec3(0.2);
     gl_FragColor = vec4(color, 1.0);
 }
@@ -53,13 +53,12 @@ void main()
 </head>
 
 <body>
-<canvas id="gl-canvas" width="512" height="512">
-    ERROR NO CANVAS
-</canvas>
+<canvas id="gl-canvas">ERROR NO CANVAS</canvas>
 <div>
     <body>
         <button type="button" onclick="onConnect()">Connect</button>
         <p id="score">0</p>
+        <p id="relaxation">0</p>
     </body>
     <audio id="impact">
         <source src="Audio/impact.mp3" type="audio/mpeg">  <!-- Sound effects obtained from https://www.zapsplat.com -->
