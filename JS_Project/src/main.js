@@ -79,7 +79,7 @@ window.onload = function init() {
         if (locked) {
             //Check if enough time has passed to allow for a new ball to be launched
             if (timeSinceLastLaunch > 1.0) {
-                var newProjectile = buildCube(1);
+                var newProjectile = buildProjectile(1);
                 newProjectile.scale = vec3(0.2, 0.2, 0.2);
                 newProjectile.position = camDir;
                 newProjectile.rotation = camDir;
@@ -124,10 +124,6 @@ window.onload = function init() {
     objectList[0].position = subtract(objectList[0].position, vec3(0.0,32.0,0.0));
     objectList[0].scale = vec3(30,30,30);
     objectList[0].color = vec3(0,1,0);
-    objectList.push(buildCube(4)); //TODO replace with reticle
-    objectList[1].position = vec3(0,0,-0.001);
-    objectList[1].scale = vec3(0.0006, 0.0006, 0.0006);
-    objectList[1].color = vec3(0,0,0);
 
     lastTime = Date.now();
     mainLoop();
@@ -196,8 +192,6 @@ function updatePhysics(){
             if (objectList[i].type_id == 1 && counter < 4) {
                 lightPositions[counter] = vec4(objectList[i].position[0], objectList[i].position[1], objectList[i].position[2], 10.0);
             }
-        } else if (objectList[i].type_id == 4) {
-            objectList[i].position = scale(0.2, camDir);
         }
     }
 }
@@ -213,7 +207,7 @@ function calculateCollisions(){
             }
             for (j=0; j<objectList.length; j++) {
                 if (objectList[j].type_id == 2) {
-                    if ( length( subtract( objectList[i].position, objectList[j].position) ) < 1.5 ){
+                    if ( length( subtract( objectList[i].position, objectList[j].position) ) < 1.1 ){
                         points++;
                         scoreboard.innerHTML = points;
                         objectList[i].alive = false;
@@ -251,14 +245,24 @@ function pruneObjectList(){
             impactAudio.play();
 
             //Spawn explosion of particles
-            for (j = 0; j<12; j++) {
-                var particle = buildCube(3);
+            for (j = 0; j<8; j++) {
+                var particle = buildShrapnel(3);
                 particle.scale = vec3(0.35, 0.35, 0.35);
                 particle.rotation = vec3(getRandNegToOne() * 90, getRandNegToOne()*90, getRandNegToOne()*90);
                 particle.color = vec3(0.1,0.1,0.1);
                 var pPos = vec3 (getRandNegToOne(), getRandNegToOne(), getRandNegToOne());
                 particle.position = add( objectList[i].position, pPos );
                 particle.velocity = scale(4.0, normalize(pPos) );
+                nList.push(particle);
+            }
+            for (j = 0; j<6; j++) {
+                var particle = buildFire(3);
+                particle.scale = vec3(0.2, 0.2, 0.2);
+                particle.rotation = vec3(getRandNegToOne() * 90, getRandNegToOne()*90, getRandNegToOne()*90);
+                particle.color = vec3(0.8,0.1,0.1);
+                var pPos = vec3 (getRandNegToOne(), getRandNegToOne(), getRandNegToOne());
+                particle.position = add( objectList[i].position, pPos );
+                particle.velocity = scale(12.0, normalize(pPos) );
                 nList.push(particle);
             }
         }
@@ -268,11 +272,10 @@ function pruneObjectList(){
 
 //Spawns an enemy on a hemisphere around the player
 function spawnEnemy(){
-    var newEnemy = buildCube(2);
+    var newEnemy = buildSphere(2);
     var ePos = vec3(getRandNegToOne(), Math.random(), getRandNegToOne());
     newEnemy.position = scale(30.0, normalize(ePos) );
     newEnemy.color = vec3(1,0,0);
-    newEnemy.rotation = vec3(newEnemy.position[0],newEnemy.position[1],newEnemy.position[2]); //TODO fix so enemies always face player
     objectList.push(newEnemy);
 }
 
