@@ -10,17 +10,18 @@ var gl;
 var locked = false;
 var scoreboard;
 var relaxValue;
-var shootAudio, impactAudio;
+var shootAudio, impactAudio, reloadAudio;
 
 //Uniform IDs
 var model_id;
+var normal_id;
 var view;
 var perspective_id;
 var color_id;
 var lightPos_id;
 //Attribute locations
 var vPosition;
-var vTexCoord;
+var vNormal;
 //Shader Program
 var vProgram;
 //View and perspective matrices
@@ -42,6 +43,7 @@ var scaledTime;
 var paused = true;
 var timeSpeed = 1.0; 
 var timeSinceLastLaunch = 0.0; //Tracking variable for fire rate
+var reloadTracker = 999.0;
 
 //Enemy Basic Data
 var enemySpeed = 2.0;
@@ -50,6 +52,7 @@ var timeSinceLastSpawn = 10.0;
 
 //Global data
 var objectList = [];
+var lightPositions = [];
 
 //Setup on load
 window.onload = function init() {
@@ -62,6 +65,8 @@ window.onload = function init() {
     shootAudio = document.getElementById("shoot");
     shootAudio.volume = 0.3;
     impactAudio = document.getElementById("impact");
+    reloadAudio = document.getElementById("reload");
+    reloadAudio.volume = 0.35;
     relaxValue = document.getElementById("relaxation");
 
     //Pointer locking
@@ -77,10 +82,12 @@ window.onload = function init() {
                 var newProjectile = buildCube(1);
                 newProjectile.scale = vec3(0.2, 0.2, 0.2);
                 newProjectile.position = add(vec3(0,0.2,0), scale(2,camDir));
+                newProjectile.rotation = camDir;
                 newProjectile.velocity = scale(25.0, camDir);
-                newProjectile.color = vec3(0,0,1);
+                newProjectile.color = vec3(1,1,1);
                 objectList.push(newProjectile);
                 shootAudio.play();
+                reloadTracker = 1.0;
                 timeSinceLastLaunch = 0.0;
             }
 
@@ -102,18 +109,19 @@ window.onload = function init() {
 
     //Get uniform variable locations in the shader program
     model_id = gl.getUniformLocation( vProgram, "modelMat" );
+    normal_id = gl.getUniformLocation(vProgram, "normalMat");
     view = gl.getUniformLocation(vProgram, "view");
     perspective_id = gl.getUniformLocation(vProgram, "perspective");
     lightPos_id = gl.getUniformLocation( vProgram, "lightPos");
     color_id = gl.getUniformLocation(vProgram, 'colorIn');
     vPosition = gl.getAttribLocation(vProgram, "vPosition");
-    vTexCoord = gl.getAttribLocation( vProgram, "vTexCoord" ); 
+    vNormal = gl.getAttribLocation( vProgram, "vNormal" ); 
 
     fac_vPosition = vPosition;
-    fac_vTexCoord = vTexCoord;
+    fac_vNormal = vNormal;
 
-    objectList.push(buildSquare(0));
-    objectList[0].position = subtract(objectList[0].position, vec3(0.0,2.0,0.0));
+    objectList.push(buildCube(0));
+    objectList[0].position = subtract(objectList[0].position, vec3(0.0,32.0,0.0));
     objectList[0].scale = vec3(30,30,30);
     objectList[0].color = vec3(0,1,0);
 
@@ -132,7 +140,12 @@ function mainLoop(){
     scaledTime = deltaTime * timeSpeed;
     timeSinceLastLaunch += deltaTime;
     timeSinceLastSpawn += deltaTime;
+    reloadTracker -= deltaTime;
 
+    if (reloadTracker < 0.4) {
+        reloadAudio.play();
+        reloadTracker = 999.0;
+    }
     timeSpeed = 1.0 - getDifficulty();
     if (isNaN(timeSpeed)) {
         timeSpeed = 1.0;
@@ -166,6 +179,8 @@ function updateEnemies(){
 
 //Updates the position of all objects using physics
 function updatePhysics(){
+    var counter = 0;
+    refreshLightPositions();
     for (i=0; i<objectList.length; i++) {
         //1 for projectiles
         if (objectList[i].type_id == 1 || objectList[i].type_id == 3) {
@@ -174,6 +189,9 @@ function updatePhysics(){
             //console.log(deltaPos[0], deltaPos[1], deltaPos[2]);
             objectList[i].position = add(objectList[i].position, deltaPos);
             objectList[i].velocity = add(objectList[i].velocity, scale(deltaTime, vec3(0,-9.8,0)));
+            if (objectList[i].type_id == 1 && counter < 4) {
+                lightPositions[counter] = vec4(objectList[i].position[0], objectList[i].position[1], objectList[i].position[2], 10.0);
+            }
         }
     }
 }
@@ -184,7 +202,7 @@ function calculateCollisions(){
         //1 for projectiles
         if (objectList[i].type_id == 1) {
             //Calculate the change in position
-            if (objectList[i].position[1] < -5) {
+            if (objectList[i].position[1] < -2) {
                 objectList[i].alive = false;
             }
             for (j=0; j<objectList.length; j++) {
@@ -210,7 +228,7 @@ function calculateCollisions(){
         }
         //3 for shrapnel
         else if (objectList[i].type_id == 3) {
-            if (objectList[i].position[1] < -1) {
+            if (objectList[i].position[1] < -2) {
                 objectList[i].alive = false;
             }
         }
@@ -227,10 +245,11 @@ function pruneObjectList(){
             impactAudio.play();
 
             //Spawn explosion of particles
-            for (j = 0; j<6; j++) {
+            for (j = 0; j<12; j++) {
                 var particle = buildCube(3);
-                particle.scale = vec3(0.5, 0.5, 0.5);
-                particle.color = vec3(0,0,0);
+                particle.scale = vec3(0.35, 0.35, 0.35);
+                particle.rotation = vec3(getRandNegToOne() * 90, getRandNegToOne()*90, getRandNegToOne()*90);
+                particle.color = vec3(0.1,0.1,0.1);
                 var pPos = vec3 (getRandNegToOne(), getRandNegToOne(), getRandNegToOne());
                 particle.position = add( objectList[i].position, pPos );
                 particle.velocity = scale(4.0, normalize(pPos) );
@@ -247,6 +266,7 @@ function spawnEnemy(){
     var ePos = vec3(getRandNegToOne(), Math.random(), getRandNegToOne());
     newEnemy.position = scale(30.0, normalize(ePos) );
     newEnemy.color = vec3(1,0,0);
+    newEnemy.rotation = vec3(newEnemy.position[0],newEnemy.position[1],newEnemy.position[2]); //TODO fix so enemies always face player
     objectList.push(newEnemy);
 }
 
@@ -261,12 +281,14 @@ function render(){
     for (i=0; i<objectList.length; i++) {
         gl.bindBuffer(gl.ARRAY_BUFFER, objectList[i].vBuffer); 
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, objectList[i].iBuffer);
-        gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 24, 0);
-        gl.vertexAttribPointer( vTexCoord, 2, gl.FLOAT, false, 24, 16 );
+        gl.vertexAttribPointer(vPosition, 4, gl.FLOAT, false, 32, 0);
+        gl.vertexAttribPointer( vNormal, 4, gl.FLOAT, false, 32, 16 );
 
         gl.uniform3fv(color_id, flatten(objectList[i].color));
-        gl.uniform3fv(lightPos_id, flatten(vec3(0,1,0))); //TODO add more interesting light positioning
-        gl.uniformMatrix4fv(model_id, gl.TRUE, flatten( getTransform(objectList[i].position, objectList[i].rotation, objectList[i].scale) ));
+        gl.uniform4fv(lightPos_id, flatten(lightPositions));
+        var t = getTransform(objectList[i].position, objectList[i].rotation, objectList[i].scale);
+        gl.uniformMatrix4fv(model_id, gl.TRUE, flatten( t ));
+        gl.uniformMatrix4fv(normal_id, gl.TRUE, flatten( normalMatrix(t) ));
         gl.drawElements(gl.TRIANGLES, objectList[i].indexCount, gl.UNSIGNED_SHORT, 0);
     }
 }
@@ -305,6 +327,16 @@ function updatePosition(e) {
     camDir = applyMatrix(vec3(0,0,1), mult(xRot, yRot));
 }
 
+//Sets all the lights to an unreachable value
+function refreshLightPositions(){
+    lightPositions = [
+        vec4(0, 0, 0, 0),
+        vec4(0, 0, 0, 0),
+        vec4(0, 0, 0, 0),
+        vec4(0, 0, 0, 0)
+    ];
+}
+
 //Matrix vector multiplication
 function applyMatrix(v, m) {
     var r = vec3(0,0,0);
@@ -317,6 +349,11 @@ function applyMatrix(v, m) {
 //Returns a random number from -1 to 1
 function getRandNegToOne(){
     return (Math.random() * 2) - 1;
+}
+
+//Converts radian to degrees
+function radToDegrees(r) {
+    return r*(180 / Math.PI);
 }
 
 //From JQuery source code

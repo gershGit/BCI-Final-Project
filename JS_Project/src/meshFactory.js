@@ -1,5 +1,5 @@
 var fac_vPosition;
-var fac_vTexCoord;
+var fac_vNormal;
 
 class GameObject {
     constructor(type_id) {
@@ -18,23 +18,24 @@ class GameObject {
 }
 
 //Mesh information for a square
-var squareVertices = [-1, 0, -1, 1, 0,0,
-    -1, 0, 1, 1, 0,1,
-     1, 0, 1, 1, 1,1, 
-     1, 0, -1, 1, 1,0];
+var squareVertices = [
+    -1, 0, -1, 1,       0, 1, 0, 1,
+    -1, 0, 1, 1,        0, 1, 0, 1,
+     1, 0, 1, 1,        0, 1, 0, 1, 
+     1, 0, -1, 1,       0, 1, 0, 1];
 var squareIndices = [0,1,2,0,3,2];
 
 //Mesh information for a cube
 var cubeVertices =  [
-    -1, 1, -1, 1, 0,0,
-    -1, 1, 1, 1, 0,1,
-    1, 1, 1, 1, 1,1, 
-    1, 1, -1, 1, 1,0, 
+    -1, 1, -1, 1,   -1, 1, -1, 1,
+    -1, 1, 1, 1,    -1, 1, 1, 1,
+    1, 1, 1, 1,     1, 1, 1, 1,
+    1, 1, -1, 1,    1, 1, -1, 1,
     
-    -1, -1, -1, 1, 0,0,
-    -1, -1, 1, 1, 0,1,
-    1, -1, 1, 1, 1,1, 
-    1, -1, -1, 1, 1,0];
+    -1, -1, -1, 1,  -1, -1, -1, 1,
+    -1, -1, 1, 1,   -1, -1, 1, 1,
+    1, -1, 1, 1,    1, -1, 1, 1, 
+    1, -1, -1, 1,   1, -1, -1, 1];
 var cubeIndices = [0,1,2,0,3,2,
                     4,5,6,4,7,6,
                     0,1,4,5,4,1,
@@ -55,10 +56,10 @@ function buildSquare(id){
 
     square.indexCount = squareIndices.length;
 
-    gl.vertexAttribPointer( fac_vPosition, 4, gl.FLOAT, false, 24, 0 );
+    gl.vertexAttribPointer( fac_vPosition, 4, gl.FLOAT, false, 32, 0 );
     gl.enableVertexAttribArray( fac_vPosition );
-    gl.vertexAttribPointer( fac_vTexCoord, 2, gl.FLOAT, false, 24, 16 );
-    gl.enableVertexAttribArray( fac_vTexCoord );
+    gl.vertexAttribPointer( fac_vNormal, 4, gl.FLOAT, false, 32, 16 );
+    gl.enableVertexAttribArray( fac_vNormal );
 
     return square;
 }
@@ -76,10 +77,10 @@ function buildCube(id){
 
     cube.indexCount = cubeIndices.length;
 
-    gl.vertexAttribPointer( fac_vPosition, 4, gl.FLOAT, false, 24, 0 );
+    gl.vertexAttribPointer( fac_vPosition, 4, gl.FLOAT, false, 32, 0 );
     gl.enableVertexAttribArray( fac_vPosition );
-    gl.vertexAttribPointer( fac_vTexCoord, 2, gl.FLOAT, false, 24, 16 );
-    gl.enableVertexAttribArray( fac_vTexCoord );
+    gl.vertexAttribPointer( fac_vNormal, 4, gl.FLOAT, false, 32, 16 );
+    gl.enableVertexAttribArray( fac_vNormal );
 
     return cube;
 }
