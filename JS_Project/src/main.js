@@ -81,7 +81,7 @@ window.onload = function init() {
             if (timeSinceLastLaunch > 1.0) {
                 var newProjectile = buildCube(1);
                 newProjectile.scale = vec3(0.2, 0.2, 0.2);
-                newProjectile.position = add(vec3(0,0.2,0), scale(2,camDir));
+                newProjectile.position = camDir;
                 newProjectile.rotation = camDir;
                 newProjectile.velocity = scale(25.0, camDir);
                 newProjectile.color = vec3(1,1,1);
@@ -124,6 +124,10 @@ window.onload = function init() {
     objectList[0].position = subtract(objectList[0].position, vec3(0.0,32.0,0.0));
     objectList[0].scale = vec3(30,30,30);
     objectList[0].color = vec3(0,1,0);
+    objectList.push(buildCube(4)); //TODO replace with reticle
+    objectList[1].position = vec3(0,0,-0.001);
+    objectList[1].scale = vec3(0.0006, 0.0006, 0.0006);
+    objectList[1].color = vec3(0,0,0);
 
     lastTime = Date.now();
     mainLoop();
@@ -192,6 +196,8 @@ function updatePhysics(){
             if (objectList[i].type_id == 1 && counter < 4) {
                 lightPositions[counter] = vec4(objectList[i].position[0], objectList[i].position[1], objectList[i].position[2], 10.0);
             }
+        } else if (objectList[i].type_id == 4) {
+            objectList[i].position = scale(0.2, camDir);
         }
     }
 }
