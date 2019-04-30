@@ -12,5 +12,5 @@ function getDifficulty(){
         //TODO scaling of difficulty based on testing
         return openBCI.getRelativeBandPower(0 , "alpha");
     }
-    return 5;
+    return .09;
 }
