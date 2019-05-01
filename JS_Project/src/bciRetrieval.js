@@ -16,8 +16,8 @@ function getDifficulty(){
       initVals = true;
     }
     if (connected) {
-        int currPower = openBCI.getRelativeBandPower(0 , "alpha");
-        var spot = counter%100;
+        var currPower = openBCI.getRelativeBandPower(0 , "alpha");
+        var spot = counter % 100;
         freqVals[spot] = currPower;
         var diff = avgVals();
         counter++;
@@ -27,15 +27,15 @@ function getDifficulty(){
 }
 
 function initArr(){
-  for(int i = 0; i < 100; i++){
-    freqVals[i] = 1;
+  for(var i = 0; i < 100; i++){
+    freqVals[i] = 1.0;
   }
 }
 
 funciton avgVals(){
-  var sum = 0;
-  for(int i = 0; i < 100; i++){
+  var sum = 0.0;
+  for(var i = 0; i < 100; i++){
     sum += freqVals[i];
   }
-  return sum/100;
+  return sum / 100.0;
 }
